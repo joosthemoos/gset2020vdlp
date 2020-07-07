@@ -123,10 +123,11 @@ class SendStream:
                         self.sock.sendall(send_frame)
 
                     except socket.error as exc:
-                        print(exc)
-                        self.close()
-                        box.showinfo('TCP Transceiver',' Call Terminated')
-                        Gui.callBtn['text'] = 'Call'
+                        # print(exc)
+                        # self.close()
+                        # box.showinfo('TCP Transceiver',' Call Terminated')
+                        # Gui.callBtn['text'] = 'Call'
+                        continue
 
         return
 
@@ -244,7 +245,7 @@ class RecvStream:
                         printCaption = printCaption.decode('utf-8')
                         printCaption = printCaption.strip()
                         if printCaption != "":
-                            print(printCaption)
+                            Gui.addCaption(printCaption)
 
                     if self.connStatus == False:
                         self.StatusStr = 'TCP Transceiver --- Call Disconnected'
@@ -345,10 +346,19 @@ class GUI():
         self.exitBtn.grid(row=25, column=0, sticky=NW)
         self.xcvr.wm_protocol('WM_DELETE_WINDOW', self.exit)
 
-        self.scrn = Canvas(self.xcvr, width=640, height=480, background="blue")
+        self.scrn = Canvas(self.xcvr, width=640, height=600, background="#cceeff")
         self.scrn.grid(row=0, column=1, rowspan=40)
         self.canvas_image = self.scrn.create_image(2, 2, anchor=NW, image=None)
         self.prev_image = self.scrn.create_image(482, 362, anchor=NW, image=None)
+
+        self.T = Text(self.xcvr, height=5, width = 77, background = "#ffcccc", insertbackground= 'yellow')
+        self.T.place(x=101,y=517)
+        self.S = Scrollbar(self.xcvr)
+        self.S.place(x=84,y=517)
+        self.T.config(yscrollcommand=self.S.set)
+        self.S.config(command=self.T.yview)
+
+
 
         self.StatusStr = ''
 
@@ -365,7 +375,8 @@ class GUI():
                 recv.disconnect = True
                 while recv.disconnect: pass
             self.callBtn['text'] = 'Call'
-
+    def addCaption(self, caption):
+        self.T.insert(END, caption + '\n')
     def onselect(self, evt):
         global remote_hosts
 
