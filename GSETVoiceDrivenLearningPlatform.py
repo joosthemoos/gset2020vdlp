@@ -1,0 +1,485 @@
+import cv2
+import socket
+from tkinter import *
+import tkinter.messagebox as box
+from threading import Thread
+from PIL import Image, ImageTk
+from numpy import fromstring, uint8
+import pyaudio
+import pickle, os
+import speech_recognition as sr
+
+s = socket.socket()
+port = 4096
+
+host = socket.gethostname()
+
+remote_host = socket.gethostbyname(socket.gethostname())
+
+captionLength = 500
+
+if not os.path.isfile('remote_hosts.dat'):
+    remote_hosts = [['Host1', '192.168.2.2'],
+                    ['Host2', '192.168.2.3'],
+                    ['Host3', '192.168.1.167']]
+else:
+    file = open('remote_hosts.dat', 'rb')
+    remote_hosts = pickle.load(file)
+    file.close()
+
+
+class WebcamVideoStream:
+    def __init__(self, src):
+
+        self.stream = cv2.VideoCapture(src)
+        (self.grabbed, self.frame) = self.stream.read()
+        self.stopped = False
+
+    def start(self):
+        Thread(target=self.update, args=()).start()
+        return self
+
+    def update(self):
+        while True:
+            if self.stopped:
+                return
+            (self.grabbed, self.frame) = self.stream.read()
+            self.img_str = cv2.imencode('.jpg', self.frame)[1].tobytes()
+
+    def get_jpeg(self):
+        return self.img_str
+
+    def get_preview(self):
+        preview = cv2.resize(self.frame, (160, 120))
+        cv2preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGBA)
+        imgPrev = Image.fromarray(cv2preview)
+        self.tkPrev = ImageTk.PhotoImage(imgPrev)
+        return self.tkPrev
+
+    def stop(self):
+        self.stopped = True
+        return self
+
+vs = WebcamVideoStream(src=0).start()
+
+
+class SendStream:
+    def __init__(self, host, port):
+        self.addr = host
+        self.port = port
+        self.callInit = False
+        self.connStatus = False
+        self.disconnect = False
+        self.audio_buff = b''
+        self.stopped = False
+        self.caption = ''
+        self.transText = ''
+
+    def getConn(self):
+        self.sock = socket.socket()
+        self.sock.settimeout(2.0)
+        self.connStatus = True
+        err_val = False
+        try:
+            self.sock.connect((self.addr, self.port))
+        except socket.error as exc:
+            err_val = True
+            self.connStatus = False
+            box.showerror('TCP Transceiver - Socket Connect Error', exc)
+        return err_val
+
+    def sendData(self):
+        global StatusStr
+
+        while self.stopped == False:
+            if self.connStatus == False:
+                if self.callInit:
+                    StatusStr = 'TCP Transceiver --- Connecting to ' + remote_host + ' port ' + str(port)
+                    send_err = send.getConn()
+                    self.callInit = False
+                    if send_err: Gui.callBtn['text'] = 'Call'
+                    sendTextThread.start()
+            else:
+                if self.disconnect:
+                    self.callInit = False
+                    self.close()
+                    self.disconnect = False
+                else:
+                    tempCaption = self.caption
+
+                    img_str = vs.get_jpeg()
+                    self.audio_buff = sendStream.read(chunk)
+
+                    captionBytes = bytes(tempCaption.ljust(captionLength, ' '), 'utf-8')
+
+                    frame_size = (4 + len(img_str) + len(self.audio_buff) + captionLength).to_bytes(4, byteorder='big')
+
+                    send_frame = frame_size + img_str + self.audio_buff + captionBytes
+
+                    if self.caption == tempCaption:
+                        self.caption = ''
+
+                    try:
+                        self.sock.sendall(send_frame)
+
+                    except socket.error as exc:
+                        print(exc)
+                        self.close()
+                        box.showinfo('TCP Transceiver',' Call Terminated')
+                        Gui.callBtn['text'] = 'Call'
+
+        return
+
+    def sendCaption(self):
+        print('activated')
+        r = sr.Recognizer()
+
+        while True:
+            with sr.Microphone() as source:
+                audio = r.listen(source)
+                try:
+                    self.transText = r.recognize_google(audio).lower()
+                    self.caption = self.transText
+                except:
+                    self.transText = ''
+                    self.caption = self.transText
+
+    def stop(self):
+        self.stopped = True
+        return
+
+    def close(self):
+        self.sock.close()
+        self.connStatus = False
+        return
+
+send = SendStream(host=remote_host, port=port)
+sendThread = Thread(target=send.sendData, args=())
+sendTextThread = Thread(target=send.sendCaption, args=())
+
+class RecvStream:
+    def __init__(self, sock, host, port):
+        self.sock = sock
+        self.conn = socket.socket()
+        sock.bind((host, port))
+        self.img = None
+        self.imgtk = None
+        self.image_ready = False
+        self.audio = None
+        sock.listen(1)
+        self.connStatus = False
+        self.disconnect = False
+        self.stopped = False
+
+    def checkConn(self):
+        addr = ''
+        self.sock.setblocking(0)
+        try:
+            self.conn, addr = self.sock.accept()
+            self.conn.setblocking(1)
+            if (addr == ''):
+                self.connStatus = False
+            else:
+                self.connStatus = True
+        except:
+            pass
+        self.sock.setblocking(1)
+        return addr
+
+    def recvData(self):
+        global StatusStr
+        while self.stopped == False:
+            if self.connStatus == False:
+                StatusStr = 'TCP Transceiver --- Listening on ' + host + ' port ' + str(port)
+                addr = self.checkConn()
+                if self.connStatus:
+                    StatusStr = 'TCP Transceiver --- Connection from ' + addr[0] + ' port ' + str(port)
+                    if send.connStatus == False:
+                        send.addr = addr[0]
+                        send.callInit = True
+                        Gui.callBtn['text'] = 'Disconnect'
+            else:
+                if self.disconnect:
+                    self.close()
+                    self.disconnect = False
+                else:
+                    self.conn.settimeout(1.0)
+                    d = b''
+                    frame_buff = b''
+                    image_size = 0
+                    recv_size = 4096
+                    d = self.conn.recv(recv_size)
+                    if len(d) != 0:
+                        self.connStatus = True
+                        frame_buff += d
+                        frame_size = int.from_bytes(frame_buff[0:4], byteorder='big')
+                    else:
+                        self.connStatus = False
+
+                    if self.connStatus == True:
+                        while len(frame_buff) < frame_size:
+                            d = self.conn.recv(recv_size)
+                            if len(d) != 0:
+                                frame_buff += d
+                                diff = frame_size - len(frame_buff)
+                                if diff < recv_size: recv_size = diff
+                            else:
+                                self.connStatus = False
+                                break
+
+                    if self.connStatus == True:
+                        img_size = frame_size - 2 * chunk - 4 - captionLength
+
+                        jpeg = fromstring(frame_buff[4:img_size + 4], uint8)
+                        image = cv2.imdecode(jpeg, -1)
+                        cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
+                        self.img = Image.fromarray(cv2image)
+                        self.image_ready = True
+
+                        offset = frame_size - 2 * chunk - captionLength
+                        self.audio = frame_buff[offset:frame_size - captionLength]
+                        playStream.write(self.audio)
+
+                        printCaption = frame_buff[frame_size - captionLength:frame_size]
+                        printCaption = printCaption.decode('utf-8')
+                        printCaption = printCaption.strip()
+                        if printCaption != "":
+                            print(printCaption)
+
+                    if self.connStatus == False:
+                        self.StatusStr = 'TCP Transceiver --- Call Disconnected'
+
+        return
+
+    def get_image(self):
+        self.imgtk = ImageTk.PhotoImage(self.img)
+        return self.imgtk
+
+    def stop(self):
+        self.stopped = True
+
+    def close(self):
+        self.conn.close()
+        self.connStatus = False
+        return
+
+recv = RecvStream(sock=s, host=host, port=port)
+recvThread = Thread(target=recv.recvData, args=())
+
+pa = pyaudio.PyAudio()
+chunk = 1024
+format = pyaudio.paInt16
+channels = 1
+rate = 8000
+
+playStream = pa.open(format=format,
+                     channels=channels,
+                     rate=rate,
+                     input=False,
+                     output=True,
+                     frames_per_buffer=chunk)
+
+sendStream = pa.open(format=format,
+                     channels=channels,
+                     rate=rate,
+                     input=True,
+                     output=False,
+                     frames_per_buffer=chunk)
+
+class GUI():
+    global remote_host
+
+    def __init__(self):
+        self.xcvr = Tk()
+        self.xcvr.minsize(700, 500)
+        self.xcvr.resizable(0, 0)
+        self.xcvr.title('Video Chat')
+
+        self.callBtn = Button(self.xcvr)
+        self.callBtn.configure(text='Call', width=10, command=self.call)
+        self.callBtn.grid(row=0, column=0, sticky=NW)
+
+        self.Label = Label(self.xcvr, text='Remote Hosts')
+        self.Label.grid(row=1, column=0, sticky=NW)
+
+        self.host_label_str = StringVar()
+        self.host_label = Label(self.xcvr, width=10, bg='yellow', textvariable=self.host_label_str)
+        self.host_label.grid(row=2, column=0, sticky=NW)
+
+        self.hosts_listbox = Listbox(self.xcvr, height=8, width=11)
+        for i in range(len(remote_hosts)):
+            self.hosts_listbox.insert(i, remote_hosts[i][0])
+        self.hosts_listbox.select_set(0)
+        self.hosts_listbox.bind('<<ListboxSelect>>', self.onselect)
+        self.hosts_listbox.grid(row=3, column=0, sticky=NW)
+
+        self.selRemBtn = Button(self.xcvr)
+        self.selRemBtn.configure(text='Select', width=10, command=self.selRem)
+        self.selRemBtn.grid(row=4, column=0, sticky=NW)
+
+        self.host_str = StringVar()
+        self.host_entry = Entry(self.xcvr, width=11, textvariable=self.host_str)
+        self.host_str.set(remote_hosts[0][0])
+        self.host_entry.grid(row=11, column=0, sticky=NW)
+        remote_host = remote_hosts[0][1]
+
+        self.addr_str = StringVar()
+        self.addr_entry = Entry(self.xcvr, width=11, textvariable=self.addr_str)
+        self.addr_str.set(remote_hosts[0][1])
+        self.addr_entry.grid(row=12, column=0, sticky=NW)
+
+        self.editRemBtn = Button(self.xcvr)
+        self.editRemBtn.configure(text='Edit', width=10, command=self.editRem)
+        self.editRemBtn.grid(row=14, column=0, sticky=NW)
+
+        self.addRemBtn = Button(self.xcvr)
+        self.addRemBtn.configure(text='Add', width=10, command=self.addRem)
+        self.addRemBtn.grid(row=15, column=0, sticky=NW)
+
+        self.delRemBtn = Button(self.xcvr)
+        self.delRemBtn.configure(text='Delete', width=10, command=self.delRem)
+        self.delRemBtn.grid(row=16, column=0, sticky=NW)
+
+        self.exitBtn = Button(self.xcvr)
+        self.exitBtn.configure(text='Exit', width=10, command=self.exit)
+        self.exitBtn.grid(row=25, column=0, sticky=NW)
+        self.xcvr.wm_protocol('WM_DELETE_WINDOW', self.exit)
+
+        self.scrn = Canvas(self.xcvr, width=640, height=480, background="blue")
+        self.scrn.grid(row=0, column=1, rowspan=40)
+        self.canvas_image = self.scrn.create_image(2, 2, anchor=NW, image=None)
+        self.prev_image = self.scrn.create_image(482, 362, anchor=NW, image=None)
+
+        self.StatusStr = ''
+
+    def call(self):
+        if self.callBtn['text'] == 'Call':
+            self.callBtn['text'] = 'Disconnect'
+            send.addr = remote_host
+            send.callInit = True
+        elif self.callBtn['text'] == 'Disconnect':
+            if send.connStatus:
+                send.disconnect = True
+                while send.disconnect: pass
+            if recv.connStatus:
+                recv.disconnect = True
+                while recv.disconnect: pass
+            self.callBtn['text'] = 'Call'
+
+    def onselect(self, evt):
+        global remote_hosts
+
+        i = self.hosts_listbox.curselection()[0]
+        self.host_str.set(remote_hosts[i][0])
+        self.addr_str.set(remote_hosts[i][1])
+
+    def selRem(self):
+        global remote_host
+
+        i = self.hosts_listbox.curselection()[0]
+        self.host_label_str.set(self.hosts_listbox.get(i))
+        self.host_str.set(remote_hosts[i][0])
+        self.addr_str.set(remote_hosts[i][1])
+        remote_host = remote_hosts[i][1]
+
+    def editRem(self):
+        global remote_hosts
+
+        i = self.hosts_listbox.curselection()[0]
+        tempHost = self.host_entry.get()
+        tempAddr = self.addr_entry.get()
+        self.hosts_listbox.delete(i)
+        self.hosts_listbox.insert(i, tempHost)
+        remote_hosts[i][0] = tempHost
+        remote_hosts[i][1] = tempAddr
+
+        file = open('remote_hosts.dat', 'wb')
+        pickle.dump(remote_hosts, file)
+        file.close()
+
+    def addRem(self):
+        global remote_hosts
+
+        tempHost = self.host_entry.get()
+        tempAddr = self.addr_entry.get()
+        err = False
+        for i in range(len(remote_hosts)):
+            if tempHost == remote_hosts[i][0] or tempAddr == remote_hosts[i][1]:
+                err = True
+                break
+        if err:
+            box.showerror('Add Remote Host Error', 'Host name or address already in use')
+        else:
+            remote_hosts.append([tempHost, tempAddr])
+            self.hosts_listbox.insert(END, tempHost)
+            file = open('remote_hosts.dat', 'wb')
+            pickle.dump(remote_hosts, file)
+            file.close()
+
+    def delRem(self):
+        global remote_hosts
+
+        i = self.hosts_listbox.curselection()[0]
+        self.hosts_listbox.delete(i)
+        del remote_hosts[i:i + 1]
+        self.hosts_listbox.select_set(0)
+
+        file = open('remote_hosts.dat', 'wb')
+        pickle.dump(remote_hosts, file)
+        file.close()
+
+    def exit(self):
+        if send.connStatus:
+            send.disconnect = True
+            while send.disconnect: pass
+
+        send.stop()
+        while sendThread.is_alive(): pass
+        if sendStream.is_active():
+            sendStream.stop_stream()
+            sendStream.close()
+
+        recv.stop()
+        while recvThread.is_alive(): pass
+        recv.close()
+        recv.sock.close()
+        if playStream.is_active():
+            playStream.stop_stream()
+            playStream.close()
+
+        pa.terminate()
+
+        vs.stop()
+        vs.stream.release()
+
+        self.xcvr.destroy()
+
+    def run(self):
+        self.scrn.after(0, self.updateGUI())
+        self.xcvr.mainloop()
+
+    def updateGUI(self):
+
+        self.xcvr.title(StatusStr)
+
+        if recv.connStatus:
+            if recv.image_ready:
+                imgtk = recv.get_image()
+                self.scrn.itemconfig(self.canvas_image, image=imgtk)
+        else:
+            self.scrn.itemconfig(self.canvas_image, image=b'')
+
+        if send.connStatus:
+            self.scrn.itemconfig(self.prev_image, image=vs.get_preview())
+        else:
+            self.scrn.itemconfig(self.prev_image, image=b'')
+
+        self.xcvr.update_idletasks()
+        self.scrn.after(20, self.updateGUI)
+
+
+if __name__ == '__main__':
+    recvThread.start()
+    sendThread.start()
+    Gui = GUI()
+    Gui.run()
