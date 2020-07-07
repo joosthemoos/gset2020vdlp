@@ -117,7 +117,7 @@ class SendStream:
                     self.audio_buff = sendStream.read(chunk)
 
                     if tempCaption != '':
-                        Gui.addCaption1(tempCaption)
+                        Gui.addCaption1(self.caption)
 
                     captionBytes = bytes(tempCaption.ljust(captionLength, ' '), 'utf-8')
 
