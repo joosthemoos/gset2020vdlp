@@ -1,6 +1,7 @@
 import cv2
 import socket
 from tkinter import *
+from tkinter import simpledialog
 import tkinter.messagebox as box
 from threading import Thread
 from PIL import Image, ImageTk
@@ -8,6 +9,7 @@ from numpy import fromstring, uint8
 import pyaudio
 import pickle, os
 import speech_recognition as sr
+from time import sleep
 
 s = socket.socket()
 port = 4096
@@ -17,6 +19,8 @@ host = socket.gethostname()
 remote_host = socket.gethostbyname(socket.gethostname())
 
 captionLength = 500
+
+captionOn = False
 
 if not os.path.isfile('remote_hosts.dat'):
     remote_hosts = [['Host1', '192.168.2.2'],
@@ -98,7 +102,9 @@ class SendStream:
                     send_err = send.getConn()
                     self.callInit = False
                     if send_err: Gui.callBtn['text'] = 'Call'
-                    sendTextThread.start()
+                    if captionOn == False:
+                        sendTextThread.start()
+                        captionOn == True
             else:
                 if self.disconnect:
                     self.callInit = False
@@ -109,6 +115,9 @@ class SendStream:
 
                     img_str = vs.get_jpeg()
                     self.audio_buff = sendStream.read(chunk)
+
+                    if tempCaption != '':
+                        Gui.addCaption1(tempCaption)
 
                     captionBytes = bytes(tempCaption.ljust(captionLength, ' '), 'utf-8')
 
@@ -132,7 +141,6 @@ class SendStream:
         return
 
     def sendCaption(self):
-        print('activated')
         r = sr.Recognizer()
 
         while True:
@@ -245,7 +253,7 @@ class RecvStream:
                         printCaption = printCaption.decode('utf-8')
                         printCaption = printCaption.strip()
                         if printCaption != "":
-                            Gui.addCaption(printCaption)
+                            Gui.addCaption2(printCaption)
 
                     if self.connStatus == False:
                         self.StatusStr = 'TCP Transceiver --- Call Disconnected'
@@ -284,6 +292,7 @@ sendStream = pa.open(format=format,
                      channels=channels,
                      rate=rate,
                      input=True,
+                     input_device_index = 1,
                      output=False,
                      frames_per_buffer=chunk)
 
@@ -358,9 +367,14 @@ class GUI():
         self.T.config(yscrollcommand=self.S.set)
         self.S.config(command=self.T.yview)
 
-
-
         self.StatusStr = ''
+
+        self.username = "you"
+        self.getUsername()
+
+    def getUsername(self):
+        self.username = simpledialog.askstring(title='Name', prompt="What is your name ?")
+        self.username = self.username.upper()
 
     def call(self):
         if self.callBtn['text'] == 'Call':
@@ -375,8 +389,13 @@ class GUI():
                 recv.disconnect = True
                 while recv.disconnect: pass
             self.callBtn['text'] = 'Call'
-    def addCaption(self, caption):
-        self.T.insert(END, caption + '\n')
+
+    def addCaption1(self, caption):
+        self.T.insert(END, self.username + ": " + caption + '\n')
+
+    def addCaption2(self, caption):
+        self.T.insert(END, "Person 2: " + caption + '\n')
+
     def onselect(self, evt):
         global remote_hosts
 
