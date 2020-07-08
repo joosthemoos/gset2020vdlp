@@ -8,7 +8,10 @@ from PIL import Image, ImageTk
 from numpy import fromstring, uint8
 import pyaudio
 import pickle, os
+from googletrans import Translator
+
 import speech_recognition as sr
+
 from time import sleep
 
 s = socket.socket()
@@ -77,6 +80,7 @@ class SendStream:
         self.audio_buff = b''
         self.stopped = False
         self.caption = ''
+        self.captionSecondLan = ''
         self.transText = ''
 
     def getConn(self):
@@ -94,6 +98,7 @@ class SendStream:
 
     def sendData(self):
         global StatusStr
+        trans1 = Translator()
 
         while self.stopped == False:
             if self.connStatus == False:
@@ -117,9 +122,12 @@ class SendStream:
                     self.audio_buff = sendStream.read(chunk)
 
                     if tempCaption != '':
-                        Gui.addCaption1(self.caption)
+                        self.captionSecondLan = trans1.translate(self.caption, scr='en', dest='es').text
+                        Gui.addCaption1(self.caption,self.captionSecondLan)
+                        self.captionSecondLan = ''
 
-                    captionBytes = bytes(tempCaption.ljust(captionLength, ' '), 'utf-8')
+                    captionBytes = bytes(tempCaption.ljust(500, ' '), 'utf-8')
+                    # secondCaptionBytes = bytes(self.captionSecondLan.ljust(250, ' '), 'utf-8')
 
                     frame_size = (4 + len(img_str) + len(self.audio_buff) + captionLength).to_bytes(4, byteorder='big')
 
@@ -127,6 +135,7 @@ class SendStream:
 
                     if self.caption == tempCaption:
                         self.caption = ''
+                        self.captionSecondLan = ''
 
                     try:
                         self.sock.sendall(send_frame)
@@ -142,15 +151,24 @@ class SendStream:
 
     def sendCaption(self):
         r = sr.Recognizer()
+        trans = Translator()
+        mic = sr.Microphone()
 
         while True:
-            with sr.Microphone() as source:
+            with mic as source:
                 audio = r.listen(source)
                 try:
-                    self.transText = r.recognize_google(audio).lower()
-                    self.caption = self.transText
+                    if Gui.languageType == 'English':
+                        self.transText = r.recognize_google(audio).lower()
+                        self.caption = self.transText
+                    elif Gui.languageType == 'Spanish':
+                        real_audio = r.recognize_google(audio, language ="es-ES")
+                        string = str(real_audio)
+                        self.transText = trans.translate(string, scr='es', dest='en').text
+                        self.caption = self.transText
                 except:
                     self.transText = ''
+                    self.captionSecondLan = self.transText
                     self.caption = self.transText
 
     def stop(self):
@@ -197,6 +215,7 @@ class RecvStream:
 
     def recvData(self):
         global StatusStr
+        transText = Translator()
         while self.stopped == False:
             if self.connStatus == False:
                 StatusStr = 'TCP Transceiver --- Listening on ' + host + ' port ' + str(port)
@@ -241,6 +260,7 @@ class RecvStream:
 
                         jpeg = fromstring(frame_buff[4:img_size + 4], uint8)
                         image = cv2.imdecode(jpeg, -1)
+
                         cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
                         self.img = Image.fromarray(cv2image)
                         self.image_ready = True
@@ -252,8 +272,11 @@ class RecvStream:
                         printCaption = frame_buff[frame_size - captionLength:frame_size]
                         printCaption = printCaption.decode('utf-8')
                         printCaption = printCaption.strip()
+
+
                         if printCaption != "":
-                            Gui.addCaption2(printCaption)
+                            printSecondCaption = transText.translate(printCaption, scr='en', dest='es').text
+                            Gui.addCaption2(printCaption, printSecondCaption)
 
                     if self.connStatus == False:
                         self.StatusStr = 'TCP Transceiver --- Call Disconnected'
@@ -292,7 +315,7 @@ sendStream = pa.open(format=format,
                      channels=channels,
                      rate=rate,
                      input=True,
-                     input_device_index = 1,
+                     input_device_index = 0,
                      output=False,
                      frames_per_buffer=chunk)
 
@@ -355,6 +378,11 @@ class GUI():
         self.exitBtn.grid(row=25, column=0, sticky=NW)
         self.xcvr.wm_protocol('WM_DELETE_WINDOW', self.exit)
 
+        self.languageTypeBtn = Button(self.xcvr)
+        self.languageTypeBtn.configure(text='Spanish', width=10, command=self.translate)
+        self.languageTypeBtn.grid(row=20, column=0, sticky=NW)
+        self.languageType = 'English'
+
         self.scrn = Canvas(self.xcvr, width=640, height=600, background="#cceeff")
         self.scrn.grid(row=0, column=1, rowspan=40)
         self.canvas_image = self.scrn.create_image(2, 2, anchor=NW, image=None)
@@ -371,6 +399,14 @@ class GUI():
 
         self.username = "you"
         self.getUsername()
+
+    def translate(self):
+        if self.languageType == 'English':
+            self.languageType = 'Spanish'
+            self.languageTypeBtn['text'] = 'English'
+        elif self.languageType == 'Spanish':
+            self.languageType = 'English'
+            self.languageTypeBtn['text'] = 'Spanish'
 
     def getUsername(self):
         self.username = simpledialog.askstring(title='Name', prompt="What is your name ?")
@@ -390,11 +426,13 @@ class GUI():
                 while recv.disconnect: pass
             self.callBtn['text'] = 'Call'
 
-    def addCaption1(self, caption):
+    def addCaption1(self, caption, secondCaption):
         self.T.insert(END, self.username + ": " + caption + '\n')
+        self.T.insert(END, secondCaption + '\n')
 
-    def addCaption2(self, caption):
+    def addCaption2(self, caption, secondCaption):
         self.T.insert(END, "Person 2: " + caption + '\n')
+        self.T.insert(END, secondCaption + '\n')
 
     def onselect(self, evt):
         global remote_hosts
@@ -508,7 +546,7 @@ class GUI():
         self.scrn.after(20, self.updateGUI)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':8ui
     recvThread.start()
     sendThread.start()
     Gui = GUI()
