@@ -109,7 +109,7 @@ class SendStream:
                     if send_err: Gui.callBtn['text'] = 'Call'
                     if captionOn == False:
                         sendTextThread.start()
-                        captionOn == True
+                        globals()['captionOn'] = True
             else:
                 if self.disconnect:
                     self.callInit = False
@@ -122,9 +122,12 @@ class SendStream:
                     self.audio_buff = sendStream.read(chunk)
 
                     if tempCaption != '':
-                        self.captionSecondLan = trans1.translate(self.caption, scr='en', dest='es').text
-                        Gui.addCaption1(self.caption,self.captionSecondLan)
-                        self.captionSecondLan = ''
+                        if Gui.languageType == "Spanish":
+                            self.captionSecondLan = trans1.translate(self.caption, scr='en', dest='es').text
+                            Gui.addCaption1(self.captionSecondLan)
+                            self.captionSecondLan = ''
+                        elif Gui.languageType == 'English':
+                            Gui.addCaption1(self.caption)
 
                     captionBytes = bytes(tempCaption.ljust(500, ' '), 'utf-8')
                     # secondCaptionBytes = bytes(self.captionSecondLan.ljust(250, ' '), 'utf-8')
@@ -275,8 +278,11 @@ class RecvStream:
 
 
                         if printCaption != "":
-                            printSecondCaption = transText.translate(printCaption, scr='en', dest='es').text
-                            Gui.addCaption2(printCaption, printSecondCaption)
+                            if Gui.languageType == 'Spanish':
+                                printSecondCaption = transText.translate(printCaption, scr='en', dest='es').text
+                                Gui.addCaption2(printSecondCaption)
+                            elif Gui.languageType == 'English':
+                                Gui.addCaption2(printCaption)
 
                     if self.connStatus == False:
                         self.StatusStr = 'TCP Transceiver --- Call Disconnected'
@@ -426,13 +432,11 @@ class GUI():
                 while recv.disconnect: pass
             self.callBtn['text'] = 'Call'
 
-    def addCaption1(self, caption, secondCaption):
+    def addCaption1(self, caption):
         self.T.insert(END, self.username + ": " + caption + '\n')
-        self.T.insert(END, secondCaption + '\n')
 
-    def addCaption2(self, caption, secondCaption):
+    def addCaption2(self, caption):
         self.T.insert(END, "Person 2: " + caption + '\n')
-        self.T.insert(END, secondCaption + '\n')
 
     def onselect(self, evt):
         global remote_hosts
