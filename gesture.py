@@ -1,15 +1,16 @@
-import cv2
-import numpy as np
-import math
+def handPoll(frame):
+    import cv2
+    import numpy as np
+    import math
+    #cap = cv2.VideoCapture(0)
 
-cap = cv2.VideoCapture(0)
-
-while (cap.isOpened()):
+    #while (True):
+    #while (cap.isOpened()):
 
     try:  # an error comes if it does not find anything in window as it cannot find contour of max area
         # therefore this try error statement
 
-        ret, frame = cap.read()
+        #ret, frame = cap.read()
         #user camera
         frame = cv2.flip(frame, 1) # flips image frames into right orientation
 
@@ -31,7 +32,7 @@ while (cap.isOpened()):
         # creates a mask of colors within color ange
         mask = cv2.inRange(hsv, lower_skin, upper_skin)
 
-        # extrapolate the hand to fill dark spots within, interations signify how many erode layers are applied to the mask (the more, the thinner the image)
+        # extrapolate the hand to fill dark spots within, iterations signify how many erode layers are applied to the mask (the more, the thinner the image)
         mask = cv2.erode(mask, kernel, iterations=5)
 
         # blur the image - Gaussian blur uses standard deviation methods to give greater weight to central (mean) values within matrix
@@ -108,12 +109,16 @@ while (cap.isOpened()):
 
                 else:
                     cv2.putText(frame, '1', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-
+                    print("1")
+                    return 1
         elif defect == 2:
             cv2.putText(frame, '2', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+            return 2
+            print("2")
 
         elif defect == 3:
-
+            return 3
+            print("3")
             #if arearatio < 27:
             cv2.putText(frame, '3', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
             #else:
@@ -121,29 +126,27 @@ while (cap.isOpened()):
 
         elif defect == 4:
             cv2.putText(frame, '4', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-
+            print("4")
+            return 4
         elif defect == 5:
             cv2.putText(frame, '5', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-
+            print("5")
+            return 5
         elif defect == 6:
             cv2.putText(frame, 'reposition', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-
+            print("6")
+            return 6
         else:
             cv2.putText(frame, 'reposition', (10, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-
+            print("7")
+            return 7
         # show the windows
-        cv2.imshow('mask', mask)
-        cv2.imshow('frame', frame)
+        #cv2.imshow('mask', mask)
+        #cv2.imshow('frame', frame)
     except:
+        return 0
 
-        pass
 
-    k = cv2.waitKey(5) & 0xFF
-    if k == 27:
-        break
-print("not working")
-cv2.destroyAllWindows()
-cap.release()
 
 
 
