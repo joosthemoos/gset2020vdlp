@@ -546,7 +546,7 @@ class GUI():
         self.scrn.after(20, self.updateGUI)
 
 
-if __name__ == '__main__':8ui
+if __name__ == '__main__':
     recvThread.start()
     sendThread.start()
     Gui = GUI()
