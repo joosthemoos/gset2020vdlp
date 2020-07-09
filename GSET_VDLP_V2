@@ -12,8 +12,8 @@ from googletrans import Translator
 from gtts import gTTS
 from playsound import playsound
 import speech_recognition as sr
+#import gesture
 
-from time import sleep
 
 s = socket.socket()
 port = 4096
@@ -139,6 +139,7 @@ class SendStream:
                     indexPoll = tempCaption.find("poll")
                     indexGset = tempCaption.find("create")
                     indexDone = tempCaption.find("done")
+                    indexDunn = tempCaption.find("dunn")
 
 
                     if indexPoll != -1 and indexGset != -1:
@@ -151,27 +152,31 @@ class SendStream:
                         elif Gui.pollState ==2:
                             if indexPoll == -1 and indexGset == -1:
                                 Gui.question += tempCaption
-                            if indexDone != -1 or len(Gui.question) > 200:
+                            if indexDone != -1 or indexDunn != -1 or len(Gui.question) > 200:
                                 self.optionOneAudioThread.start()
+                                Gui.question = Gui.question.replace("dunn","")
                                 Gui.question = Gui.question.replace("done","") + "?"
                                 Gui.pollState = 3
                         elif Gui.pollState == 3:
                             # if indexDone == -1:
                             Gui.option1 += tempCaption
-                            if indexDone != -1:
+                            if indexDone != -1 or indexDunn != -1:
                                 self.optionTwoAudioThread.start()
+                                Gui.option1 = Gui.option1.replace("dunn","")
                                 Gui.option1 = Gui.option1.replace("done","")
                                 Gui.pollState = 4
                         elif Gui.pollState == 4:
                             Gui.option2 += tempCaption
-                            if indexDone != -1:
+                            if indexDone != -1 or indexDunn != -1:
                                 self.optionThreeAudioThread.start()
-                                Gui.option2.replace("done","")
+                                Gui.option2 = Gui.option2.replace("dunn","")
+                                Gui.option2 = Gui.option2.replace("done","")
                                 Gui.pollState = 5
                         elif Gui.pollState == 5:
                             Gui.option3 += tempCaption
-                            if indexDone != -1:
-                                Gui.option3.replace("done","")
+                            if indexDone != -1 or indexDunn != -1:
+                                Gui.option3 = Gui.option3.replace("dunn","")
+                                Gui.option3 = Gui.option3.replace("done","")
                                 Gui.pollState = 6
                         elif Gui.pollState == 6:
                             font = cv2.FONT_HERSHEY_SIMPLEX
@@ -179,6 +184,7 @@ class SendStream:
                             Gui.pollDisplayCount += 1
                             if Gui.pollDisplayCount > 100:
                                 Gui.pollState = 7
+
                         elif Gui.pollState == 7:
                             Gui.pollState = 0
                             Gui.poll = False
@@ -347,6 +353,16 @@ class RecvStream:
                         image = cv2.imdecode(jpeg, -1)
 
                         cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
+
+                        # if Gui.pollState == 6:
+                        #     num = handPoll(cv2image)
+                        #     if num != 0:
+                        #         if num ==1:
+                        #             #popup
+                        #         elif num ==2:
+                        #             #popup
+                        #         elif num ==3:
+                        #             #popup
 
 
 
