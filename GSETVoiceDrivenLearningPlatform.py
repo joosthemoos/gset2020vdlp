@@ -5,14 +5,14 @@ from tkinter import simpledialog
 import tkinter.messagebox as box
 from threading import Thread
 from PIL import Image, ImageTk
-from numpy import fromstring, uint8
+from numpy import fromstring, uint8, array
 import pyaudio
 import pickle, os
 from googletrans import Translator
-
+from gtts import gTTS
+from playsound import playsound
 import speech_recognition as sr
 
-from time import sleep
 
 s = socket.socket()
 port = 4096
@@ -22,6 +22,7 @@ host = socket.gethostname()
 remote_host = socket.gethostbyname(socket.gethostname())
 
 captionLength = 500
+pollLength = 500
 
 captionOn = False
 
@@ -58,6 +59,8 @@ class WebcamVideoStream:
 
     def get_preview(self):
         preview = cv2.resize(self.frame, (160, 120))
+        if Gui.pollDetection == True:
+            cv2.rectangle(preview, (25, 25), (75, 100), (0, 255, 0), 2)
         cv2preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGBA)
         imgPrev = Image.fromarray(cv2preview)
         self.tkPrev = ImageTk.PhotoImage(imgPrev)
@@ -82,6 +85,10 @@ class SendStream:
         self.caption = ''
         self.captionSecondLan = ''
         self.transText = ''
+        self.questionAudioThread = Thread(target=self.questionAudio,args=())
+        self.optionOneAudioThread = Thread(target=self.optionOneAudio,args=())
+        self.optionTwoAudioThread = Thread(target=self.optionTwoAudio,args=())
+        self.optionThreeAudioThread = Thread(target=self.optionThreeAudio,args=())
 
     def getConn(self):
         self.sock = socket.socket()
@@ -99,7 +106,8 @@ class SendStream:
     def sendData(self):
         global StatusStr
         trans1 = Translator()
-
+        display = ''
+        emptyPollBytes = bytes("".ljust(500, ' '), 'utf-8')
         while self.stopped == False:
             if self.connStatus == False:
                 if self.callInit:
@@ -129,12 +137,76 @@ class SendStream:
                         elif Gui.languageType == 'English':
                             Gui.addCaption1(self.caption)
 
+                    indexPoll = tempCaption.find("poll")
+                    indexGset = tempCaption.find("create")
+                    indexDone = tempCaption.find("done")
+                    indexDunn = tempCaption.find("dunn")
+                    # indexClear = tempCaption.find("clear")
+
+                    if indexPoll != -1 and indexGset != -1:
+                        Gui.poll = True
+                        Gui.pollState = 1
+                    if Gui.poll:
+                        if Gui.pollState == 1:
+                            self.questionAudioThread.start()
+                            Gui.pollState = 2
+                        elif Gui.pollState ==2:
+                            if indexPoll == -1 and indexGset == -1:
+                                Gui.question += tempCaption
+                            if indexDone != -1 or indexDunn != -1 or len(Gui.question) > 200:
+                                self.optionOneAudioThread.start()
+                                # Gui.question = Gui.question.replace("clear","")
+                                Gui.question = Gui.question.replace("dunn","")
+                                Gui.question = Gui.question.replace("done","") + "?"
+                                Gui.pollState = 3
+                        elif Gui.pollState == 3:
+                            # if indexDone == -1:
+                            Gui.option1 += tempCaption
+                            if indexDone != -1 or indexDunn != -1:
+                                self.optionTwoAudioThread.start()
+                                Gui.option1 = Gui.option1.replace("dunn","")
+                                Gui.option1 = Gui.option1.replace("done","")
+                                Gui.pollState = 4
+                        elif Gui.pollState == 4:
+                            Gui.option2 += tempCaption
+                            if indexDone != -1 or indexDunn != -1:
+                                self.optionThreeAudioThread.start()
+                                Gui.option2 = Gui.option2.replace("dunn","")
+                                Gui.option2 = Gui.option2.replace("done","")
+                                Gui.pollState = 5
+                        elif Gui.pollState == 5:
+
+                            Gui.option3 += tempCaption
+                            if indexDone != -1 or indexDunn != -1:
+                                Gui.option3 = Gui.option3.replace("dunn","")
+                                Gui.option3 = Gui.option3.replace("done","")
+                                Gui.pollState = 6
+                        elif Gui.pollState == 6:
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            display = Gui.question + '\nOption 1 : ' + Gui.option1 + '\nOption 2 : ' + Gui.option2 + '\nOption 3: ' + Gui.option3
+                            Gui.pollDisplayCount += 1
+                            if Gui.pollDisplayCount > 200:
+                                Gui.pollState = 7
+
+                        elif Gui.pollState == 7:
+                            Gui.pollState = 0
+                            Gui.poll = False
+                            Gui.pollDisplayCount = 0
+                            Gui.question = ''
+                            Gui.option1 = ''
+                            Gui.option2 = ''
+                            Gui.option3 = ''
+
                     captionBytes = bytes(tempCaption.ljust(500, ' '), 'utf-8')
                     # secondCaptionBytes = bytes(self.captionSecondLan.ljust(250, ' '), 'utf-8')
+                    if Gui.pollState == 6:
+                        pollBytes = bytes(display.ljust(500, ' '), 'utf-8')
+                    else:
+                        pollBytes = emptyPollBytes
 
-                    frame_size = (4 + len(img_str) + len(self.audio_buff) + captionLength).to_bytes(4, byteorder='big')
+                    frame_size = (4 + len(img_str) + len(self.audio_buff) + captionLength + pollLength).to_bytes(4, byteorder='big')
 
-                    send_frame = frame_size + img_str + self.audio_buff + captionBytes
+                    send_frame = frame_size + img_str + self.audio_buff + captionBytes + pollBytes
 
                     if self.caption == tempCaption:
                         self.caption = ''
@@ -151,6 +223,25 @@ class SendStream:
                         continue
 
         return
+    def questionAudio(self):
+        tts = gTTS(text="Please say your question and use the keyword done to finish and the keyword clear to reset question", lang='en')
+        tts.save("speech.mp3")
+        playsound("speech.mp3")
+    def optionOneAudio(self):
+        tts = gTTS(text="Please say option one and use the keyword done to finish and the keyword clear to reset option one", lang='en')
+        os.remove("speech.mp3")
+        tts.save("speech.mp3")
+        playsound("speech.mp3")
+    def optionTwoAudio(self):
+        tts = gTTS(text="Please say option two and use the keyword done to finish and the keyword clear to reset option two", lang='en')
+        os.remove("speech.mp3")
+        tts.save("speech.mp3")
+        playsound("speech.mp3")
+    def optionThreeAudio(self):
+        tts = gTTS(text="Please say option three and use the keyword done to finish and the keyword clear to reset option three", lang='en')
+        os.remove("speech.mp3")
+        tts.save("speech.mp3")
+        playsound("speech.mp3")
 
     def sendCaption(self):
         r = sr.Recognizer()
@@ -186,6 +277,155 @@ class SendStream:
 send = SendStream(host=remote_host, port=port)
 sendThread = Thread(target=send.sendData, args=())
 sendTextThread = Thread(target=send.sendCaption, args=())
+
+
+# def handPoll(frame):
+#     import cv2
+#     import numpy as np
+#     import math
+#     #cap = cv2.VideoCapture(0)
+#
+#     #while (True):
+#     #while (cap.isOpened()):
+#
+#     try:  # an error comes if it does not find anything in window as it cannot find contour of max area
+#         # therefore this try error statement
+#
+#         #ret, frame = cap.read()
+#         #user camera
+#         frame = cv2.flip(frame, 1) # flips image frames into right orientation
+#
+#         #detection camera
+#         #creates a 3x3 matrix full of 1's (integer) for a mean blur
+#         kernel = np.ones((3, 3), np.uint8) # noise detection frame
+#
+#         # define region of interest (where the hand is) within frame
+#         roi = frame[100:500, 100:300]
+#
+#         #draws rectangle in frame window
+#         cv2.rectangle(frame, (100, 100), (300, 400), (0, 255, 0), 0)
+#         hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV) # changes color scale from BGR to HSV for readability within target area of frame
+#
+#         # define skin color range in HSV
+#         lower_skin = np.array([0, 20, 70], dtype=np.uint8)
+#         upper_skin = np.array([46, 255, 255], dtype=np.uint8)
+#
+#         # creates a mask of colors within color ange
+#         mask = cv2.inRange(hsv, lower_skin, upper_skin)
+#
+#         # extrapolate the hand to fill dark spots within, iterations signify how many erode layers are applied to the mask (the more, the thinner the image)
+#         mask = cv2.erode(mask, kernel, iterations=5)
+#
+#         # blur the image - Gaussian blur uses standard deviation methods to give greater weight to central (mean) values within matrix
+#         mask = cv2.GaussianBlur(mask, (5, 5), 70)
+#
+#         # find contours
+#         _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#
+#         # find contour of max area(hand) and disregards noise
+#         handContour = max(contours, key=lambda x: cv2.contourArea(x))
+#
+#         # approx the contour a little
+#         epsilon = 0.0005 * cv2.arcLength(handContour, True)
+#         approx = cv2.approxPolyDP(handContour, epsilon, True)
+#
+#         # make convex hull around hand
+#         handOutline = cv2.convexHull(handContour)
+#
+#         # define area of hull and area of hand
+#         areahull = cv2.contourArea(handOutline)
+#         areaHand = cv2.contourArea(handContour)
+#
+#         # find the percentage of area not covered by hand in convex hull
+#         arearatio = ((areahull - areaHand) / areaHand) * 100
+#
+#         # find the defects in convex hull with respect to hand
+#         handOutline = cv2.convexHull(approx, returnPoints=False)
+#         defects = cv2.convexityDefects(approx, handOutline)
+#
+#         # no. of defects
+#         defect = 0
+#
+#         # code for finding no. of defects due to fingers
+#         for i in range(defects.shape[0]):
+#             s, e, f, d = defects[i, 0]
+#             start = tuple(approx[s][0])
+#             end = tuple(approx[e][0])
+#             far = tuple(approx[f][0])
+#             pt = (100, 180)
+#
+#             # find length of all sides of triangle
+#             a = math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+#             b = math.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+#             c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
+#             s = (a + b + c) / 2
+#             ar = math.sqrt(s * (s - a) * (s - b) * (s - c))
+#
+#             # distance between point and convex hull
+#             d = (2 * ar) / a
+#
+#             # apply cosine rule here
+#             angle = math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)) * 57
+#
+#             # ignore angles > 90 and ignore points very close to convex hull(they generally come due to noise)
+#             if angle <= 90 and d > 30:
+#                 defect += 1
+#                 cv2.circle(roi, far, 3, [255, 0, 0], -1)
+#
+#             # draw lines around hand
+#             cv2.line(roi, start, end, [0, 255, 0], 2)
+#
+#         defect += 1
+#
+#         # print corresponding gestures which are in their ranges
+#         font = cv2.FONT_HERSHEY_SIMPLEX
+#         if defect == 1:
+#             if areaHand < 2000:
+#                 cv2.putText(frame, 'Put hand in the box', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             else:
+#                 if arearatio < 12:
+#                     cv2.putText(frame, '0', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#                 #elif arearatio < 17.5:
+#                    # cv2.putText(frame, 'Best of luck', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#
+#                 else:
+#                     cv2.putText(frame, '1', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#                     print("1")
+#                     return 1
+#         elif defect == 2:
+#             cv2.putText(frame, '2', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             return 2
+#             print("2")
+#
+#         elif defect == 3:
+#             return 3
+#             print("3")
+#             #if arearatio < 27:
+#             cv2.putText(frame, '3', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             #else:
+#                 #cv2.putText(frame, 'ok', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#
+#         elif defect == 4:
+#             cv2.putText(frame, '4', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             print("4")
+#             return 4
+#         elif defect == 5:
+#             cv2.putText(frame, '5', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             print("5")
+#             return 5
+#         elif defect == 6:
+#             cv2.putText(frame, 'reposition', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             print("6")
+#             return 6
+#         else:
+#             cv2.putText(frame, 'reposition', (10, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
+#             print("7")
+#             return 7
+#         # show the windows
+#         #cv2.imshow('mask', mask)
+#         #cv2.imshow('frame', frame)
+#     except:
+#         return 0
 
 class RecvStream:
     def __init__(self, sock, host, port):
@@ -259,23 +499,49 @@ class RecvStream:
                                 break
 
                     if self.connStatus == True:
-                        img_size = frame_size - 2 * chunk - 4 - captionLength
+                        img_size = frame_size - 2 * chunk - 4 - captionLength - pollLength
 
                         jpeg = fromstring(frame_buff[4:img_size + 4], uint8)
                         image = cv2.imdecode(jpeg, -1)
 
                         cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
-                        self.img = Image.fromarray(cv2image)
-                        self.image_ready = True
 
-                        offset = frame_size - 2 * chunk - captionLength
-                        self.audio = frame_buff[offset:frame_size - captionLength]
+                        # if Gui.pollState == 6:
+                        #     num = handPoll(image)
+                        #     if num != 0:
+                        #         if num ==1:
+                        #             print('1')
+                        #         elif num ==2:
+                        #             print("2")
+                        #         elif num ==3:
+                        #             print("3")
+                        #         Gui.pollState = 7
+
+
+                        offset = frame_size - 2 * chunk - captionLength - pollLength
+                        self.audio = frame_buff[offset:frame_size - captionLength - pollLength]
                         playStream.write(self.audio)
 
-                        printCaption = frame_buff[frame_size - captionLength:frame_size]
+                        printCaption = frame_buff[frame_size - captionLength - pollLength:frame_size - pollLength]
                         printCaption = printCaption.decode('utf-8')
                         printCaption = printCaption.strip()
 
+                        pollContent = frame_buff[frame_size - pollLength:frame_size]
+                        pollContent = pollContent.decode('utf-8')
+                        pollContent = pollContent.strip()
+
+                        if pollContent != "":
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            y0, dy = 300,30
+                            for i, line in enumerate(pollContent.split('\n')):
+                                y = y0 + i*dy
+                                cv2image = cv2.putText(cv2image,line,(10,y), font, 0.5, (0,255,0), 1, cv2.LINE_AA)
+                            Gui.pollDetection = True
+                        else:
+                            Gui.pollDetection = False
+
+                        self.img = Image.fromarray(cv2image)
+                        self.image_ready = True
 
                         if printCaption != "":
                             if Gui.languageType == 'Spanish':
@@ -405,6 +671,16 @@ class GUI():
 
         self.username = "you"
         self.getUsername()
+
+        self.poll = False
+        self.pollState = 0
+        self.question = ''
+        self.option1 = ''
+        self.option2 = ''
+        self.option3 = ''
+        self.pollDisplayCount = 0
+
+        self.pollDetection = False
 
     def translate(self):
         if self.languageType == 'English':
