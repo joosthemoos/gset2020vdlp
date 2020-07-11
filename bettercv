@@ -38,7 +38,10 @@ def handPoll(image, timeElapsed):
     def calculateFingers(handOutline, drawing):  # -> finished bool, cnt: finger count
         #  convexity defect
         hull = cv2.convexHull(handOutline)
-        areaHull = cv2.contourArea(hull)
+        if len(hull!=0):#testingg
+            areaHull = cv2.contourArea(hull)
+        else:
+            areaHull=0
         hull = cv2.convexHull(handOutline, returnPoints=False)
         #print(areaHull)
 
