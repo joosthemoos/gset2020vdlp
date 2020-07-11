@@ -84,14 +84,14 @@ def handPoll(image, timeElapsed):
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
         cv2.rectangle(frame, (int(cap_region_x_begin * frame.shape[1]), 0),
-                      (frame.shape[1], int(cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)
+                      (frame.shape[1], int(cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)#modify roi
         cv2.imshow('original', frame)
 
         #  Main operation
         if isBgCaptured == 1:  # this part wont run until background captured
             img = removeBG(frame)
             img = img[0:int(cap_region_y_end * frame.shape[0]),
-                  int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]  # clip the ROI
+                  int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]  # clip the ROI [y1:y2,x1,x2]               
             cv2.imshow('mask', img)
 
             # convert the image into binary image
