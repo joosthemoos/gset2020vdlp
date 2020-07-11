@@ -1,0 +1,132 @@
+def handPoll(frame, timeElapsed):
+    import cv2
+    import numpy as np
+    import copy
+    import math
+
+    # parameters
+    cap_region_x_begin = 0.6  # start point/total width
+    cap_region_y_end = 0.7  # start point/total width
+    blurValue = 41  # GaussianBlur parameter
+    bgSubThreshold = 90 #original 50
+    areaHand = 0
+    areaHull = 0
+    areaRatio = 0
+    # variables
+    isBgCaptured = 0  # bool, whether the background captured
+
+
+    #detects and removes background
+    def removeBG(frame):
+        #removes
+        foreground_mask = backgroundSubtractor.apply(frame, learningRate=0) #static background model (first frame)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4)) #mask is comprised of dots of dimensions (x,y)
+        #mask = cv2.morphologyEx(foreground_mask, cv2.MORPH_OPEN, kernel) #erodes then dilates
+        #kernel = np.ones((3, 3), np.uint8)
+        foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=2) #erode "subtracts", dilate "adds"
+        mask = cv2.bitwise_and(frame, frame, mask=foreground_mask)
+        return mask
+
+
+    def calculateFingers(handOutline, drawing):  # -> finished bool, cnt: finger count
+        #  convexity defect
+        hull = cv2.convexHull(handOutline)
+        if (len(hull)>3):
+            areaHull = cv2.contourArea(hull)
+        else:
+            areaHull=0
+        print("length", len(hull), "areahull", areaHull)  # delete later
+        hull = cv2.convexHull(handOutline, returnPoints=False)
+
+
+        if len(hull) > 3:
+            # defects saves into an array  [ start point, end point, farthest point, approximate distance to farthest point ]
+            defects = cv2.convexityDefects(handOutline, hull) # identifies defects
+            if type(defects) != type(None):  # avoid crashing
+                defect = 0
+                for i in range(defects.shape[0]):  # calculate the angle
+                    s, e, f, d = defects[i][0]
+                    start = tuple(handOutline[s][0])
+                    end = tuple(handOutline[e][0])
+                    far = tuple(handOutline[f][0])
+                    # pythagorean theorem
+                    a = math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+                    b = math.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+                    c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
+                    # cosine theorem
+                    angle = math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c))
+                    if angle <= math.pi / 2:  # angle less than 90 degree, treat as fingers
+                        defect += 1
+                        # draws a blue circle where the farthest (defect) is, fills it in
+                        cv2.circle(drawing, far, 8, [211, 84, 0], -1)
+                return True, defect, areaHull
+        return False, 0, areaHull
+
+
+
+    while timeElapsed < 300: # CHANGE number later -> for GUI
+        threshold = 100
+        #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
+        frame = cv2.flip(frame, 1)  # flip the frame horizontally
+        cv2.rectangle(frame, (int(cap_region_x_begin * frame.shape[1]), 0),
+                      (frame.shape[1], int(cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)# modify roi
+
+
+        if isBgCaptured == 1:
+            img = removeBG(frame)
+            img = img[0:int(cap_region_y_end * frame.shape[0]),
+                  int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]  # clip the ROI [y1:y2,x1,x2]
+            cv2.imshow('mask', img)
+
+            # convert the image into binary image
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
+            ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
+
+            # get the contours
+            thresh1 = copy.deepcopy(thresh)
+            _, contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            length = len(contours)
+            maxArea = -1
+            if length > 0:
+                for i in range(length):  # find the biggest contour (according to area)
+                    temp = contours[i]
+                    area = cv2.contourArea(temp)
+                    if area > maxArea:
+                        maxArea = area
+                        hand = i
+
+                areaHand = maxArea
+                handOutline = contours[hand]
+                handHull = cv2.convexHull(handOutline)
+                areaHull = cv2.contourArea(handOutline)
+                drawing = np.zeros(img.shape, np.uint8) # black bg canvas w/ same dimensions as image
+                cv2.drawContours(drawing, [handOutline], 0, (0, 255, 0), 2) # precision green outline around hand
+                cv2.drawContours(drawing, [handHull], 0, (0, 0, 255), 3) # approx geometric outline around hand
+
+                isFinishCal, cnt, areaHull = calculateFingers(handOutline, drawing)
+                if (areaHand!=0):
+                    areaRatio = ((areaHull - areaHand) / areaHand) * 100
+
+                if isFinishCal is True:
+                    if cnt==0:
+                        if areaRatio >30: # change value later
+                           # print("one finger", arearatio)
+                            return 1
+                        else:
+                            #print("zero", arearatio)
+                            return 0
+                    if cnt==1:
+                        #print("two finger", arearatio)
+                        return 2
+                    if cnt==2:
+                        #print("three finger", arearatio)
+                        return 3
+                    if cnt>2:
+                        return 0
+                        #print("too many finger", arearatio)
+
+        #give buffer time to load
+        elif timeElapsed == 50:
+            backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
+            isBgCaptured = 1
