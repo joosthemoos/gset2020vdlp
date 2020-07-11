@@ -62,8 +62,9 @@ class WebcamVideoStream:
                 cap = array(PIL.ImageGrab.grab())
                 # cap2 = cv2.resize(cap, dsize=(640, 480), interpolation=cv2.INTER_CUBIC)
                 cap2 = cv2.resize(cap, dsize=(640, 480), interpolation=cv2.INTER_AREA)
+                cap3 = cv2.cvtColor(cap2, cv2.COLOR_BGR2RGBA)
 
-                self.img_str = cv2.imencode('.jpg', cap2)[1].tobytes()
+                self.img_str = cv2.imencode('.jpg', cap3)[1].tobytes()
 
     def get_jpeg(self):
         return self.img_str
@@ -74,7 +75,8 @@ class WebcamVideoStream:
         else:
             cap = array(PIL.ImageGrab.grab())
             # preview = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_CUBIC)
-            preview = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_AREA)
+            cap2 = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_AREA)
+            preview = cv2.cvtColor(cap2, cv2.COLOR_BGR2RGBA)
 
         if Gui.pollDetection == True:
             cv2.rectangle(preview, (25, 25), (75, 100), (0, 255, 0), 2)
