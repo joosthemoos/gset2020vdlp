@@ -225,6 +225,8 @@ class SendStream:
                             Gui.pollReceiveCount += 1
                             if Gui.pollReceiveCount < 100:
                                 display = Gui.question + '\nOption 1 : ' + Gui.option1 + '\nOption 2 : ' + Gui.option2 + '\nOption 3: ' + Gui.option3
+                            elif Gui.pollReceiveCount < 150:
+                                display="Remove Hand"
                             if Gui.pollReceiveCount > 250:
                                 Gui.pollState = 7
 
@@ -544,11 +546,11 @@ class RecvStream:
                                 elif num ==3:
                                     print("3")
                                 Gui.listVals.append(num)
-                            if Gui.numTimesConfirmed == 20:
+                            if Gui.numTimesConfirmed == 5:
                                 for i in Gui.listVals:
                                     Gui.pollResult += i
 
-                                Gui.pollResult = round(Gui.pollResult/20)
+                                Gui.pollResult = round(Gui.pollResult/5)
                                 print("Final result is:", Gui.pollResult)
                                 Gui.pollState = 7
                                 Gui.pollReceiveCount = 0
