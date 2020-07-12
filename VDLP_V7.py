@@ -446,8 +446,9 @@ def handPoll(frame, timeElapsed):
 
         #give buffer time to load
         if timeElapsed == 3:
-            backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
-            isBgCaptured=1
+            #history, threshold
+            globals()['isBgCaptured'] = 1
+            globals()['backgroundSubtractor'] = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
     return 0
 class RecvStream:
     def __init__(self, sock, host, port):
