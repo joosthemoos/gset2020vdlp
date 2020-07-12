@@ -76,6 +76,7 @@ class WebcamVideoStream:
         return self.img_str
 
     def get_preview(self):
+        preview=cv2.flip(preview,1)
         if vs.screenSharing == False:
             preview = cv2.resize(self.frame, (160, 120))
         else:
@@ -83,6 +84,7 @@ class WebcamVideoStream:
             # preview = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_CUBIC)
             cap2 = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_AREA)
             preview = cv2.cvtColor(cap2, cv2.COLOR_BGR2RGBA)
+            
 
         if Gui.pollDetection == True:
             font=cv2.FONT_HERSHEY_SIMPLEX
