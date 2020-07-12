@@ -390,7 +390,7 @@ def handPoll(frame, timeElapsed):
 
 
     if timeElapsed < 250: # CHANGE number later -> for GUI
-        threshold = 100
+        threshold = 60
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
 
