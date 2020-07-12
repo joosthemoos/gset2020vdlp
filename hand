@@ -1,0 +1,184 @@
+import cv2
+
+cap = cv2.VideoCapture(0)
+
+def handPoll(image, timeElapsed):
+    import cv2
+    import numpy as np
+    import copy
+    import math
+
+    # parameters
+    cap_region_x_begin = 0.6  # start point/total width
+    cap_region_y_end = 0.7  # start point/total width
+    blurValue = 41  # GaussianBlur parameter
+    bgSubThreshold = 90 #original 50
+    areaHand=0
+    areaHull=0
+    areaRatio=0
+    # variables
+    isBgCaptured = 0  # bool, whether the background captured
+
+
+    #detects and removes background
+    def removeBG(frame):
+        #removes
+        foreground_mask = backgroundSubtractor.apply(frame, learningRate=0) #static background model (first frame)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4)) #mask is comprised of dots of dimensions (x,y)
+        #mask = cv2.morphologyEx(foreground_mask, cv2.MORPH_OPEN, kernel) #erodes then dilates
+        #kernel = np.ones((3, 3), np.uint8)
+        foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=2) #erode "subtracts", dilate "adds"
+        mask = cv2.bitwise_and(frame, frame, mask=foreground_mask)
+        return mask
+
+
+    def calculateFingers(handOutline, drawing):  # -> finished bool, cnt: finger count
+        #  convexity defect
+        hull = cv2.convexHull(handOutline)
+        if (len(hull)>3):
+            areaHull = cv2.contourArea(hull)
+        else:
+            areaHull=0
+        #print("length", len(hull), "areahull", areaHull)  # delete later
+        hull = cv2.convexHull(handOutline, returnPoints=False)
+
+
+        if len(hull) > 3:
+            # defects saves into an array  [ start point, end point, farthest point, approximate distance to farthest point ]
+            defects = cv2.convexityDefects(handOutline, hull) #identifies defects
+            if type(defects) != type(None):  # avoid crashing.   (BUG not found)
+                defect = 0
+                for i in range(defects.shape[0]):  # calculate the angle
+                    s, e, f, d = defects[i][0]
+                    start = tuple(handOutline[s][0])
+                    end = tuple(handOutline[e][0])
+                    far = tuple(handOutline[f][0])
+                    # pythagorean theorem
+                    a = math.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
+                    b = math.sqrt((far[0] - start[0]) ** 2 + (far[1] - start[1]) ** 2)
+                    c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
+                    # cosine theorem
+                    angle = math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c))
+                    if angle <= math.pi / 2:  # angle less than 90 degree, treat as fingers
+                        defect += 1
+                        # draws a blue circle where the farthest (defect) is, fills it in
+                        cv2.circle(drawing, far, 8, [211, 84, 0], -1)
+                return True, defect, areaHull
+        return False, 0, areaHull
+
+
+    # Camera
+
+    cap.set(10, 200)
+    #cv2.namedWindow('trackbar')
+    #cv2.createTrackbar('trh1', 'trackbar', threshold, 100)#, printThreshold)
+
+    while True:
+        ret, frame = cap.read()#DELETE THIS LATER
+        timeElapsed = timeElapsed + 1 #delete later, increment is passed in Rithesh's code
+        #print(timeElapsed)
+        threshold = 100 # cv2.getTrackbarPos('trh1', 'trackbar')
+        #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
+        frame = cv2.flip(frame, 1)  # flip the frame horizontally
+        cv2.rectangle(frame, (400,100), (600,300), (255, 0, 0), 2)#modify roi
+
+        cv2.imshow('original', frame)
+
+        #  Main operation
+        if isBgCaptured == 1:  # this part wont run until background captured
+            img = removeBG(frame)
+            img = img[100:300, 400:600] # clip the ROI [y1:y2,x1,x2]
+            cv2.imshow('mask', img)
+
+            # convert the image into binary image
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
+            #cv2.imshow('blur', blur)
+            ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
+            cv2.imshow('thresh', thresh)
+
+            # get the coutours
+            thresh1 = copy.deepcopy(thresh)
+            _, contours, hierarchy = cv2.findContours(thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            length = len(contours)
+            maxArea = -1
+            if length > 0:
+                for i in range(length):  # find the biggest contour (according to area)
+                    temp = contours[i]
+                    area = cv2.contourArea(temp)
+                    if area > maxArea:
+                        maxArea = area
+                        hand = i
+
+                areaHand = maxArea
+                handOutline = contours[hand]
+                handHull = cv2.convexHull(handOutline)
+                areaHull = cv2.contourArea(handOutline)
+                drawing = np.zeros(img.shape, np.uint8) #black bg canvas w/ same dimensions as image
+                cv2.drawContours(drawing, [handOutline], 0, (0, 255, 0), 2) #precision green outline around hand
+                cv2.drawContours(drawing, [handHull], 0, (0, 0, 255), 3) #approx geometric outline around hand
+
+                isFinishCal, cnt, areaHull = calculateFingers(handOutline, drawing)
+                if (areaHand!=0):
+                    areaRatio = ((areaHull - areaHand) / areaHand) * 100
+
+
+                if isFinishCal is True:
+
+                    #print("Area hull:",areaHull, "area hand:", areaHand)
+                    print("Area ratio,", areaRatio)
+                    if cnt==0:
+                        if areaRatio >15: #change value later
+                            hi=1
+                            #print("one finger", areaRatio)
+                            #return 1
+                        else:
+                            hi = 1
+                            #print("zero", areaRatio)
+                            #return 0
+                    if cnt==1:
+                        hi=1
+                        #print("two finger", areaRatio)
+                        #return 2
+                    if cnt==2:
+                        hi = 1
+                        #print("three finger", areaRatio)
+                        #return 3
+                    if cnt>2:
+                        hi = 1
+                        #print("too many finger", areaRatio)
+                    # app('System Events').keystroke(' ')  # simulate pressing blank space
+
+            cv2.imshow('output', drawing) #delete later
+
+        # Keyboard OP
+        k = cv2.waitKey(10) #delete later
+        if k == 27:   #delete later
+            cap.release()  # #delete later
+            cv2.destroyAllWindows()  #delete later
+            break #delete later
+        #give buffer time to load
+
+        if timeElapsed==50:  # press 'b' to capture the background
+            backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
+            isBgCaptured = 1
+        elif timeElapsed > 800: # replace with timeElapsed+someNumberauto closes when time elapse surpasses max time
+            print("done")
+            #return 0
+
+            cv2.destroyAllWindows() #delete later
+            cap.release()#delete later
+            return 0
+            #return result
+'''
+        elif k == ord('r'):  # press 'r' to reset the background #delete later
+            backgroundSubtractor = None #delete later
+            triggerSwitch = False #delete later
+            isBgCaptured = 0 #delete later
+            print('!!!Reset BackGround!!!') #delete later'''
+
+#delete when done
+while True:#delete when done
+    ret, frame = cap.read()#delete when done
+    handPoll(frame, 1) #delete when done
+    #create some global variable in rithesh's code that is set to return value from my code
