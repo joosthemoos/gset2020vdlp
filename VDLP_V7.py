@@ -19,7 +19,7 @@ import speech_recognition as sr
 from mss import mss
 import webbrowser
 from Crypto.Cipher import AES
-import handPoll
+
 
 
 
