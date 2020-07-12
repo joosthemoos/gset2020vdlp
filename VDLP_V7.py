@@ -334,8 +334,7 @@ def handPoll(frame, timeElapsed):
     areaHand = 0
     areaHull = 0
     areaRatio = 0
-    # variables
-    isBgCaptured = 0  # bool, whether the background captured
+    backgroundSubtractor= None
 
 
     #detects and removes background
@@ -391,7 +390,7 @@ def handPoll(frame, timeElapsed):
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
 
-        if isBgCaptured == 1:
+        if timeElapsed >=3:
             img = removeBG(frame)
             img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
             cv2.imshow('mask', img)
@@ -445,9 +444,9 @@ def handPoll(frame, timeElapsed):
                         #print("too many finger", areaRatio)
 
         #give buffer time to load
-        if timeElapsed == 50:
+        if timeElapsed < 3:
             backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
-            isBgCaptured = 1
+           
     return 0
 class RecvStream:
     def __init__(self, sock, host, port):
