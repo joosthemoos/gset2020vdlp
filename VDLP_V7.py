@@ -335,6 +335,7 @@ def handPoll(frame, timeElapsed):
     areaHull = 0
     areaRatio = 0
     backgroundSubtractor= None
+    isBgCaptured = 0 
 
 
     #detects and removes background
@@ -393,7 +394,7 @@ def handPoll(frame, timeElapsed):
         if timeElapsed >=3:
             img = removeBG(frame)
             img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
-            cv2.imshow('mask', img)
+            #cv2.imshow('mask', img)
 
             # convert the image into binary image
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -444,9 +445,9 @@ def handPoll(frame, timeElapsed):
                         #print("too many finger", areaRatio)
 
         #give buffer time to load
-        if timeElapsed < 3:
+        if timeElapsed == 3:
             backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
-           
+            
     return 0
 class RecvStream:
     def __init__(self, sock, host, port):
@@ -530,7 +531,8 @@ class RecvStream:
                         cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
 
                         if Gui.pollState == 6:
-                            num = handPoll(image, Gui.pollDisplayCount)
+                            Gui.pollReceiveCount+=1
+                            num = handPoll(image, Gui.pollReceiveCount)
                             if num != 0:
                                 if num ==1:
                                     print('1')
@@ -539,6 +541,8 @@ class RecvStream:
                                 elif num ==3:
                                     print("3")
                                 Gui.pollState = 7
+                                Gui.pollReceiveCount=0
+                        
 
 
                         offset = frame_size - 2 * chunk - captionLength - pollLength
@@ -732,7 +736,7 @@ class GUI():
         self.option2 = ''
         self.option3 = ''
         self.pollDisplayCount = 0
-
+        self.pollReceiveCount = 0
         self.pollDetection = False
 
         self.encryptionObject = AES.new("1234567891234567".encode("utf-8"), AES.MODE_CFB,
