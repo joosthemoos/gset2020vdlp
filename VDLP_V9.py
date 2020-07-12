@@ -86,11 +86,9 @@ class WebcamVideoStream:
 
         if Gui.pollDetection == True:
             font=cv2.FONT_HERSHEY_SIMPLEX
-            #if Gui.pollDisplayCount <= 100:
-                #cv2.putText(preview, 'Vote in the box', (30, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
-                #cv2.putText(preview, ("you have", str(100-Gui.pollDisplayCount), " time left to vote"), (10,100), font, 0.35, (0,0,255), 1, cv2.LINE_AA)
-                #cv2.rectangle(preview, (100,25), (150,75), (255, 0, 0), 2)
-            #if Gui.pollDisplayCount > 100:
+            cv2.putText(preview, 'Vote in the box', (30, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
+            cv2.rectangle(preview, (100,25), (150,75), (255, 0, 0), 2)
+            #if Gui.pollReceiveCount > 100:
                 #cv2.putText(preview, 'Remove your fingers', (15, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
         cv2preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGBA)
         imgPrev = Image.fromarray(cv2preview)
@@ -224,9 +222,10 @@ class SendStream:
                                 Gui.pollState = 6
                         elif Gui.pollState == 6:
                             font = cv2.FONT_HERSHEY_SIMPLEX
-                            display = Gui.question + '\nOption 1 : ' + Gui.option1 + '\nOption 2 : ' + Gui.option2 + '\nOption 3: ' + Gui.option3
-                            Gui.pollDisplayCount += 1
-                            if Gui.pollDisplayCount > 500:
+                            Gui.pollReceiveCount += 1
+                            if Gui.pollReceiveCount < 100:
+                                display = Gui.question + '\nOption 1 : ' + Gui.option1 + '\nOption 2 : ' + Gui.option2 + '\nOption 3: ' + Gui.option3
+                            if Gui.pollReceiveCount > 250:
                                 Gui.pollState = 7
 
                         elif Gui.pollState == 7:
@@ -388,7 +387,7 @@ def handPoll(frame, timeElapsed):
 
 
 
-    if timeElapsed < 500: # CHANGE number later -> for GUI
+    if timeElapsed < 250: # CHANGE number later -> for GUI
         threshold = 100
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
