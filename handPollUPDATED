@@ -83,18 +83,18 @@ def handPoll(image, timeElapsed):
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
         cv2.rectangle(frame, (400,100), (600,300), (255, 0, 0), 2)#modify roi
 
-        cv2.imshow('original', frame)
+
 
         #  Main operation
         if isBgCaptured == 1:  # this part wont run until background captured
             img = removeBG(frame)
             img = img[100:300, 400:600] # clip the ROI [y1:y2,x1,x2]
-            cv2.imshow('mask', img)
+      
 
             # convert the image into binary image
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
-            #cv2.imshow('blur', blur)
+
             ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
             cv2.imshow('thresh', thresh)
 
@@ -131,23 +131,23 @@ def handPoll(image, timeElapsed):
                     if cnt==0:
                         if areaRatio >15: #change value later
                             hi=1
-                            #print("one finger", areaRatio)
+                            print("one finger", areaRatio)
                             #return 1
                         else:
                             hi = 1
-                            #print("zero", areaRatio)
+                            print("zero", areaRatio)
                             #return 0
                     if cnt==1:
                         hi=1
-                        #print("two finger", areaRatio)
+                        print("two finger", areaRatio)
                         #return 2
                     if cnt==2:
                         hi = 1
-                        #print("three finger", areaRatio)
+                        print("three finger", areaRatio)
                         #return 3
                     if cnt>2:
                         hi = 1
-                        #print("too many finger", areaRatio)
+                        print("too many finger", areaRatio)
                     # app('System Events').keystroke(' ')  # simulate pressing blank space
 
             cv2.imshow('output', drawing) #delete later
