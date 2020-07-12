@@ -525,16 +525,16 @@ class RecvStream:
 
                         cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
 
-                        # if Gui.pollState == 6:
-                        #     num = handPoll(image, Gui.pollDisplayCount)
-                        #     if num != 0:
-                        #         if num ==1:
-                        #             print('1')
-                        #         elif num ==2:
-                        #             print("2")
-                        #         elif num ==3:
-                        #             print("3")
-                        #         Gui.pollState = 7
+                        if Gui.pollState == 6:
+                            num = handPoll(image, Gui.pollDisplayCount)
+                            if num != 0:
+                                if num ==1:
+                                    print('1')
+                                elif num ==2:
+                                    print("2")
+                                elif num ==3:
+                                    print("3")
+                                Gui.pollState = 7
 
 
                         offset = frame_size - 2 * chunk - captionLength - pollLength
