@@ -124,7 +124,7 @@ def handPoll(frame, timeElapsed):
                         #print("too many finger", areaRatio)
 
         #give buffer time to load
-        elif timeElapsed == 50:
+        if timeElapsed == 50:
             backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
             isBgCaptured = 1
     return 0
