@@ -320,7 +320,7 @@ sendThread = Thread(target=send.sendData, args=())
 sendTextThread = Thread(target=send.sendCaption, args=())
 
 
-def handPoll(frame):
+def handPoll(frame, timeElapsed):
     # parameters
     cap_region_x_begin = 0.6  # start point/total width
     cap_region_y_end = 0.7  # start point/total width
