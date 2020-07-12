@@ -391,7 +391,7 @@ def handPoll(frame, timeElapsed):
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
 
-        if timeElapsed >=3:
+        if isBgCaptured==1:
             img = removeBG(frame)
             img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
             #cv2.imshow('mask', img)
@@ -447,7 +447,7 @@ def handPoll(frame, timeElapsed):
         #give buffer time to load
         if timeElapsed == 3:
             backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
-            
+            isBgCaptured=1
     return 0
 class RecvStream:
     def __init__(self, sock, host, port):
