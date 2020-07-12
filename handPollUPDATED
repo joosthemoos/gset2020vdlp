@@ -148,18 +148,9 @@ def handPoll(image, timeElapsed):
                     if cnt>2:
                         hi = 1
                         print("too many finger", areaRatio)
-                    # app('System Events').keystroke(' ')  # simulate pressing blank space
+        
 
-            cv2.imshow('output', drawing) #delete later
-
-        # Keyboard OP
-        k = cv2.waitKey(10) #delete later
-        if k == 27:   #delete later
-            cap.release()  # #delete later
-            cv2.destroyAllWindows()  #delete later
-            break #delete later
-        #give buffer time to load
-
+          
         if timeElapsed==50:  # press 'b' to capture the background
             backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
             isBgCaptured = 1
@@ -172,12 +163,7 @@ def handPoll(image, timeElapsed):
             return 0
             #return result
 '''
-        elif k == ord('r'):  # press 'r' to reset the background #delete later
-            backgroundSubtractor = None #delete later
-            triggerSwitch = False #delete later
-            isBgCaptured = 0 #delete later
-            print('!!!Reset BackGround!!!') #delete later'''
-
+     
 #delete when done
 while True:#delete when done
     ret, frame = cap.read()#delete when done
