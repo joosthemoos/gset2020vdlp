@@ -158,9 +158,9 @@ def handPoll(image, timeElapsed):
             print("done")
             #return 0
 
-            cv2.destroyAllWindows() #delete later
+
             cap.release()#delete later
-            return 0
+
             #return result
 '''
      
