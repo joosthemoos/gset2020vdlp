@@ -321,6 +321,11 @@ sendTextThread = Thread(target=send.sendCaption, args=())
 
 
 def handPoll(frame, timeElapsed):
+    import cv2
+    import numpy as np
+    import copy
+    import math
+
     # parameters
     cap_region_x_begin = 0.6  # start point/total width
     cap_region_y_end = 0.7  # start point/total width
@@ -381,7 +386,7 @@ def handPoll(frame, timeElapsed):
 
 
 
-    while timeElapsed < 500: # CHANGE number later -> for GUI
+    if timeElapsed < 500: # CHANGE number later -> for GUI
         threshold = 100
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
@@ -423,7 +428,7 @@ def handPoll(frame, timeElapsed):
 
                 if isFinishCal is True:
                     if cnt==0:
-                        if areaRatio >30: # change value later
+                        if areaRatio >15: # change value later
                            # print("one finger", arearatio)
                             return 1
                         else:
@@ -440,10 +445,10 @@ def handPoll(frame, timeElapsed):
                         #print("too many finger", areaRatio)
 
         #give buffer time to load
-        elif timeElapsed == 50:
+        if timeElapsed == 50:
             backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
             isBgCaptured = 1
-
+    return 0
 class RecvStream:
     def __init__(self, sock, host, port):
         self.sock = sock
