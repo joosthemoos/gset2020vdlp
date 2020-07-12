@@ -77,6 +77,7 @@ class WebcamVideoStream:
     def get_preview(self):
         if vs.screenSharing == False:
             preview = cv2.resize(self.frame, (160, 120))
+            preview = cv2.flip(preview, 1)
         else:
             cap = array(PIL.ImageGrab.grab())
             # preview = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_CUBIC)
@@ -85,13 +86,12 @@ class WebcamVideoStream:
 
         if Gui.pollDetection == True:
             font=cv2.FONT_HERSHEY_SIMPLEX
-            if Gui.pollState==6:
-                if Gui.pollDisplayCount <= 100:
-                    cv2.putText(preview, 'Vote in the box', (30, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
-                    cv2.putText(preview, ("you have", str(100-Gui.pollDisplayCount), " time left to vote"), (10,100), font, 0.35, (0,0,255), 1, cv2.LINE_AA)
-                    cv2.rectangle(preview, (100,25), (150,75), (255, 0, 0), 2)
-                if Gui.pollDisplayCount > 100:
-                    cv2.putText(preview, 'Remove your fingers', (15, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
+            #if Gui.pollDisplayCount <= 100:
+                #cv2.putText(preview, 'Vote in the box', (30, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
+                #cv2.putText(preview, ("you have", str(100-Gui.pollDisplayCount), " time left to vote"), (10,100), font, 0.35, (0,0,255), 1, cv2.LINE_AA)
+                #cv2.rectangle(preview, (100,25), (150,75), (255, 0, 0), 2)
+            #if Gui.pollDisplayCount > 100:
+                #cv2.putText(preview, 'Remove your fingers', (15, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
         cv2preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGBA)
         imgPrev = Image.fromarray(cv2preview)
         self.tkPrev = ImageTk.PhotoImage(imgPrev)
