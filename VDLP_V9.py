@@ -572,13 +572,16 @@ class RecvStream:
                         pollContent = pollContent.decode('utf-8')
                         pollContent = pollContent.strip()
 
-                        if pollContent != "":
+                        if pollContent != "" and pollContent !="Remove Hand":
                             font = cv2.FONT_HERSHEY_SIMPLEX
                             y0, dy = 300,30
                             for i, line in enumerate(pollContent.split('\n')):
                                 y = y0 + i*dy
                                 cv2image = cv2.putText(cv2image,line,(10,y), font, 0.5, (0,255,0), 1, cv2.LINE_AA)
                             Gui.pollDetection = True
+                        elif pollContent=="Remove Hand":
+                            cv2image = cv2.putText(cv2image,"Remove Hand",(10,y), font, 0.5, (0,255,0), 1, cv2.LINE_AA)
+                            Gui.pollDetection = False
                         else:
                             Gui.pollDetection = False
 
