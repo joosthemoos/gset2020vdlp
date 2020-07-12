@@ -162,7 +162,7 @@ def handPoll(image, timeElapsed):
             cap.release()#delete later
 
             #return result
-'''
+
      
 #delete when done
 while True:#delete when done
