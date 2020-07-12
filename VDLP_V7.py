@@ -334,14 +334,14 @@ def handPoll(frame, timeElapsed):
     areaHand = 0
     areaHull = 0
     areaRatio = 0
-    backgroundSubtractor= None
+   
     isBgCaptured = 0 
 
 
     #detects and removes background
     def removeBG(frame):
         #removes
-        foreground_mask = backgroundSubtractor.apply(frame, learningRate=0) #static background model (first frame)
+        foreground_mask = GUI.backgroundSubtractor.apply(frame, learningRate=0) #static background model (first frame)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4)) #mask is comprised of dots of dimensions (x,y)
         #mask = cv2.morphologyEx(foreground_mask, cv2.MORPH_OPEN, kernel) #erodes then dilates
         #kernel = np.ones((3, 3), np.uint8)
@@ -391,7 +391,7 @@ def handPoll(frame, timeElapsed):
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
 
-        if isBgCaptured==1:
+        if GUI.backgroundSubtractor!=None:
             img = removeBG(frame)
             img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
             #cv2.imshow('mask', img)
@@ -447,8 +447,8 @@ def handPoll(frame, timeElapsed):
         #give buffer time to load
         if timeElapsed == 3:
             #history, threshold
-            globals()['isBgCaptured'] = 1
-            globals()['backgroundSubtractor'] = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
+            
+            Gui.backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
     return 0
 class RecvStream:
     def __init__(self, sock, host, port):
@@ -543,6 +543,7 @@ class RecvStream:
                                     print("3")
                                 Gui.pollState = 7
                                 Gui.pollReceiveCount=0
+                                Gui.backgroundSubtractor=None
                         
 
 
@@ -745,7 +746,7 @@ class GUI():
         self.unencryptionObject = AES.new("1234567891234567".encode("utf-8"), AES.MODE_CFB,
                                           'This is an IV456'.encode("utf-8"))
 
-
+        self.backGroundSubtractor=None
     def meetingid(self):
         id = simpledialog.askstring(title="Meeting ID",prompt="Enter meeting ID")
         if id != None:
