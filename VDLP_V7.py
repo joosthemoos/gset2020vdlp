@@ -22,7 +22,6 @@ from Crypto.Cipher import AES
 
 
 
-
 s = socket.socket()
 port = 4096
 
@@ -76,7 +75,6 @@ class WebcamVideoStream:
         return self.img_str
 
     def get_preview(self):
-        preview=cv2.flip(preview,1)
         if vs.screenSharing == False:
             preview = cv2.resize(self.frame, (160, 120))
         else:
@@ -84,7 +82,6 @@ class WebcamVideoStream:
             # preview = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_CUBIC)
             cap2 = cv2.resize(cap, dsize=(160, 120), interpolation=cv2.INTER_AREA)
             preview = cv2.cvtColor(cap2, cv2.COLOR_BGR2RGBA)
-            
 
         if Gui.pollDetection == True:
             font=cv2.FONT_HERSHEY_SIMPLEX
@@ -326,6 +323,8 @@ def handPoll(frame, timeElapsed):
     import copy
     import math
 
+    print(timeElapsed)
+
     # parameters
     cap_region_x_begin = 0.6  # start point/total width
     cap_region_y_end = 0.7  # start point/total width
@@ -334,14 +333,12 @@ def handPoll(frame, timeElapsed):
     areaHand = 0
     areaHull = 0
     areaRatio = 0
-   
-    isBgCaptured = 0 
 
 
     #detects and removes background
     def removeBG(frame):
         #removes
-        foreground_mask = GUI.backgroundSubtractor.apply(frame, learningRate=0) #static background model (first frame)
+        foreground_mask = Gui.backgroundSubtractor.apply(frame, learningRate=0) #static background model (first frame)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4)) #mask is comprised of dots of dimensions (x,y)
         #mask = cv2.morphologyEx(foreground_mask, cv2.MORPH_OPEN, kernel) #erodes then dilates
         #kernel = np.ones((3, 3), np.uint8)
@@ -391,7 +388,7 @@ def handPoll(frame, timeElapsed):
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
 
-        if GUI.backgroundSubtractor!=None:
+        if Gui.backgroundSubtractor != None:
             img = removeBG(frame)
             img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
             #cv2.imshow('mask', img)
@@ -446,10 +443,10 @@ def handPoll(frame, timeElapsed):
 
         #give buffer time to load
         if timeElapsed == 3:
-            #history, threshold
-            
-            Gui.backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
-    return 0
+            Gui.backgroundSubtractor = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold) #history, threshold
+
+    return 5
+
 class RecvStream:
     def __init__(self, sock, host, port):
         self.sock = sock
@@ -532,19 +529,29 @@ class RecvStream:
                         cv2image = cv2.cvtColor(image, cv2.COLOR_BGR2RGBA)
 
                         if Gui.pollState == 6:
-                            Gui.pollReceiveCount+=1
+                            Gui.pollReceiveCount += 1
                             num = handPoll(image, Gui.pollReceiveCount)
-                            if num != 0:
+                            if num == 1 or num == 2 or num == 3:
+                                Gui.numTimesConfirmed += 1
                                 if num ==1:
                                     print('1')
                                 elif num ==2:
                                     print("2")
                                 elif num ==3:
                                     print("3")
+                                Gui.listVals.append(num)
+                            if Gui.numTimesConfirmed == 20:
+                                for i in Gui.listVals:
+                                    Gui.pollResult += i
+
+                                Gui.pollResult = round(Gui.pollResult/20)
+                                print("Final result is:", Gui.pollResult)
                                 Gui.pollState = 7
-                                Gui.pollReceiveCount=0
-                                Gui.backgroundSubtractor=None
-                        
+                                Gui.pollReceiveCount = 0
+                                Gui.backgroundSubtractor = None
+                                Gui.numTimesConfirmed = 0
+                                Gui.listVals = []
+                                Gui.pollResult = 0
 
 
                         offset = frame_size - 2 * chunk - captionLength - pollLength
@@ -568,6 +575,7 @@ class RecvStream:
                             Gui.pollDetection = True
                         else:
                             Gui.pollDetection = False
+
 
                         self.img = Image.fromarray(cv2image)
                         self.image_ready = True
@@ -739,14 +747,19 @@ class GUI():
         self.option3 = ''
         self.pollDisplayCount = 0
         self.pollReceiveCount = 0
+
         self.pollDetection = False
 
         self.encryptionObject = AES.new("1234567891234567".encode("utf-8"), AES.MODE_CFB,
                                         'This is an IV456'.encode("utf-8"))
         self.unencryptionObject = AES.new("1234567891234567".encode("utf-8"), AES.MODE_CFB,
                                           'This is an IV456'.encode("utf-8"))
+        self.backgroundSubtractor = None
 
-        self.backGroundSubtractor=None
+        self.numTimesConfirmed = 0
+        self.listVals = []
+        self.pollResult = 0
+
     def meetingid(self):
         id = simpledialog.askstring(title="Meeting ID",prompt="Enter meeting ID")
         if id != None:
