@@ -85,11 +85,9 @@ class WebcamVideoStream:
             preview = cv2.cvtColor(cap2, cv2.COLOR_BGR2RGBA)
 
         if Gui.pollDetection == True:
-            cv2.rectangle(preview, (25, 25), (75, 100), (0, 255, 0), 2)
-        if Gui.pollState == 6:
             font=cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(preview, 'Vote by placing your fingers in the box', (0, 50), font, 2, (0, 0, 255), 3, cv2.LINE_AA)
-            cv2.rectangle(preview, (400,100), (600,300), (255, 0, 0), 2)
+            cv2.rectangle(preview, (100,25), (150,75), (255, 0, 0), 2)
         cv2preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGBA)
         imgPrev = Image.fromarray(cv2preview)
         self.tkPrev = ImageTk.PhotoImage(imgPrev)
