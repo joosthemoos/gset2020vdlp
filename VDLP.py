@@ -526,7 +526,7 @@ class RecvStream:
             while True:
                 ret, frame = vs.stream.read()  # DELETE THIS LATER
                 timeElapsed = timeElapsed + 1  # delete later, increment is passed in Rithesh's code
-
+                Gui.detectCount=timeElapsed
                 # print(timeElapsed)
                 threshold = 100  # cv2.getTrackbarPos('trh1', 'trackbar')
                 # frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
@@ -778,7 +778,7 @@ class GUI():
         self.unencryptionObject = AES.new("1234567891234567".encode("utf-8"), AES.MODE_CFB,
                                           'This is an IV456'.encode("utf-8"))
         self.role = "student"
-
+        self.detectCount=0
     def meetingid(self):
         id = simpledialog.askstring(title="Meeting ID",prompt="Enter meeting ID")
         if id != None:
