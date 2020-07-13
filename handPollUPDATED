@@ -96,7 +96,7 @@ def handPoll(image, timeElapsed):
             blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
 
             ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
-            cv2.imshow('thresh', thresh)
+           
 
             # get the coutours
             thresh1 = copy.deepcopy(thresh)
