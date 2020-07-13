@@ -540,7 +540,7 @@ class RecvStream:
                 cv2.rectangle(frame, (400, 100), (600, 300), (255, 0, 0), 2)  # modify roi
 
                 #  Main operation
-                if isBgCaptured == 1:  # this part wont run until background captured
+                if isBgCaptured == 1 and timeElapsed >75:  # this part wont run until background captured
                     img = removeBG(frame)
                     img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
 
