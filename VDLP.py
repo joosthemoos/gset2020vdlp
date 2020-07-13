@@ -85,9 +85,9 @@ class WebcamVideoStream:
         if Gui.pollDetection == True:
             font=cv2.FONT_HERSHEY_SIMPLEX
             cv2.rectangle(preview, (100, 25), (150, 75), (0, 255, 0), 2)
-            if Gui.detectCount<50:
+            if Gui.detectCount<55:
                 cv2.putText(preview, 'Vote in the box', (30, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
-            elif Gui.detectCount>=60:
+            elif Gui.detectCount>75:
                 cv2.putText(preview, 'Remove hand', (30, 20), font, 0.4, (0, 0, 255), 1, cv2.LINE_AA)
         cv2preview = cv2.cvtColor(preview, cv2.COLOR_BGR2RGBA)
         imgPrev = Image.fromarray(cv2preview)
