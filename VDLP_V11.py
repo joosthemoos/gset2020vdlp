@@ -84,7 +84,7 @@ class WebcamVideoStream:
 
         if Gui.pollDetection == True:
             cv2.rectangle(preview, (100, 25), (150, 75), (0, 255, 0), 2)
-            if Gui.detectCount < 101: #55
+            if Gui.detectCount < 100: #55
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 cv2.putText(preview,"Vote in the box",(30,20),font,0.4,(0,0,225),1,cv2.LINE_AA)
             elif Gui.detectCount < 120: #80
@@ -473,7 +473,7 @@ class RecvStream:
 
         # cap = cv2.VideoCapture(0)
 
-        def handPoll(image, timeElapsed):
+        def handPoll(timeElapsed):
             import cv2
             import numpy as np
             import copy
@@ -567,7 +567,7 @@ class RecvStream:
                 # cv2.imshow('original', frame)
 
                 #  Main operation
-                if isBgCaptured == 1 :  # and timeElapsed > 100 this part wont run until background captured
+                if isBgCaptured == 1:  # and timeElapsed > 100 this part wont run until background captured
                     img = removeBG(frame)
                     img = img[100:300, 400:600]  # clip the ROI [y1:y2,x1,x2]
                     # cv2.imshow('mask', img)
@@ -655,7 +655,7 @@ class RecvStream:
 
                 print(timeElapsed,Gui.detectCount,globals()['current'],globals()['previous'],globals()['success'])
 
-                if globals()['success'] > 5:
+                if globals()['success'] > 20:
                     return globals()['current']
 
                 globals()['previous'] = globals()['current']
@@ -664,7 +664,7 @@ class RecvStream:
         #delete when done
         # while True:#delete when done
         ret, frame = vs.stream.read()#delete when done
-        Gui.pollResult = handPoll(frame, 1) #delete when done
+        Gui.pollResult = handPoll(1) #delete when done
             #create some global variable in rithesh's code that is set to return value from my code
 
 
