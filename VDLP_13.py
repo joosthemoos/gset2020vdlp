@@ -781,7 +781,7 @@ class GUI():
 
         self.exitBtn = Button(self.xcvr)
         self.exitBtn.configure(text='Exit', width=10, command=self.exit)
-        self.exitBtn.grid(row=40, column=0, sticky=NW)
+        self.exitBtn.grid(row=39, column=0, sticky=NW)
         self.xcvr.wm_protocol('WM_DELETE_WINDOW', self.exit)
 
         self.screenShareBtn = Button(self.xcvr)
