@@ -12,7 +12,7 @@ def handPoll(image, timeElapsed):
     cap_region_x_begin = 0.6  # start point/total width
     cap_region_y_end = 0.7  # start point/total width
     blurValue = 41  # GaussianBlur parameter
-    bgSubThreshold = 60 #original 50
+    bgSubThreshold = 90 #original 50
     areaHand=0
     areaHull=0
     areaRatio=0
