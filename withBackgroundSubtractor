@@ -12,7 +12,7 @@ def handPoll(image, timeElapsed):
     cap_region_x_begin = 0.6  # start point/total width
     cap_region_y_end = 0.7  # start point/total width
     blurValue = 41  # GaussianBlur parameter
-    bgSubThreshold = 50 #original 50
+    bgSubThreshold = 60 #original 50
     areaHand=0
     areaHull=0
     areaRatio=0
@@ -79,7 +79,7 @@ def handPoll(image, timeElapsed):
         timeElapsed = timeElapsed + 1 #delete later, increment is passed in Rithesh's code
 
         #print(timeElapsed)
-        threshold = 100 # cv2.getTrackbarPos('trh1', 'trackbar')
+        threshold = 60 # cv2.getTrackbarPos('trh1', 'trackbar')
         #frame = cv2.bilateralFilter(frame, 5, 50, 100)  # smoothing filter
         frame = cv2.flip(frame, 1)  # flip the frame horizontally
         cv2.rectangle(frame, (400,100), (600,300), (255, 0, 0), 2)#modify roi
