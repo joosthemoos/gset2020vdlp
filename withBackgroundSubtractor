@@ -27,8 +27,7 @@ def handPoll(image, timeElapsed):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4)) #mask is comprised of dots of dimensions (x,y)
         #mask = cv2.morphologyEx(foreground_mask, cv2.MORPH_OPEN, kernel) #erodes then dilates
         #kernel = np.ones((3, 3), np.uint8)
-
-        #foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=2) #erode "subtracts", dilate "adds"
+        foreground_mask = cv2.dilate(foreground_mask, kernel, iterations=2) #erode "subtracts", dilate "adds"
         mask = cv2.bitwise_and(frame, frame, mask=foreground_mask)
         return mask
 
