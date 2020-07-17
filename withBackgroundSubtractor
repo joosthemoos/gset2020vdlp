@@ -130,25 +130,25 @@ def handPoll(image, timeElapsed):
                     #print("Area hull:",areaHull, "area hand:", areaHand)
                     print("Area ratio,", areaRatio)
                     if cnt==0:
-                        if areaRatio >15: #change value later
+                        if areaRatio >14: #change value later
                             hi=1
-                            #print("one finger", areaRatio)
+                            print("one finger", areaRatio)
                             #return 1
                         else:
                             hi = 1
-                            #print("zero", areaRatio)
+                            print("zero", areaRatio)
                             #return 0
                     if cnt==1:
                         hi=1
-                        #print("two finger", areaRatio)
+                        print("two finger", areaRatio)
                         #return 2
                     if cnt==2:
                         hi = 1
-                        #print("three finger", areaRatio)
+                        print("three finger", areaRatio)
                         #return 3
                     if cnt>2:
                         hi = 1
-                        #print("too many finger", areaRatio)
+                        print("too many finger", areaRatio)
                     # app('System Events').keystroke(' ')  # simulate pressing blank space
 
             cv2.imshow('output', drawing) #delete later
